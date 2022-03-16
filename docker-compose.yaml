@@ -1,0 +1,48 @@
+version: '3.6'
+services:
+  gitlab-ee.example.org:
+    image: 'gitlab/gitlab-ee:14.8.2-ee.0'
+    restart: always
+    hostname: 'gitlab-ee.example.org'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab-ee.example.org'
+        # Add any other gitlab.rb configuration here, each on its own line
+        pages_external_url 'http://gitlab-ee.example.org:8080/'
+        gitlab_pages['inplace_chroot'] = true
+        GITLAB_PAGES_PORT=8080
+        GITLAB_PAGES_EXTERNAL_HTTP='192.168.1.254:8080'
+    ports:
+      - '8080:80'
+      - '443:443'
+      - '2222:22'
+      - '18080:18080'
+    volumes:
+      - '$PWD/config:/etc/gitlab'
+      - '$PWD/logs:/var/log/gitlab'
+      - '$PWD/data:/var/opt/gitlab'
+    shm_size: '256m'
+    networks:
+      gitlab_net:
+        ipv4_address: 10.254.249.89
+
+  runner:
+    restart: always
+    image: gitlab/gitlab-runner:v14.8.2
+    volumes:
+      - '$PWD/gitlab-runner:/etc/gitlab-runner'
+      - '/run/docker.sock:/var/run/docker.sock'
+#      - /etc/ssl/certs:/etc/ssl/certs
+        # 最終行は、自己証明書の場合のみ必要
+        # ホストの公開鍵を GitLab Runner が動くコンテナにマウント
+    networks:
+      gitlab_net:
+
+networks: 
+  gitlab_net:
+    name: gitlab_net
+    driver: bridge
+    ipam: 
+      driver: default
+      config:
+        - subnet: 10.254.249.0/24

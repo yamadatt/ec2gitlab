@@ -1,0 +1,7 @@
+config/
+data/
+logs/
+._*
+.DS_Store
+._.DS_Stor
+README.md

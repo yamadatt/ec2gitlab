@@ -1,0 +1,70 @@
+# ロケール事前確認
+- name: check locale
+  shell: localectl status
+  register: check_localectl_result
+  check_mode: no
+  changed_when: false
+
+# ロケール設定
+- name: set locale
+  shell: localectl set-locale LANG=ja_JP.utf8
+  when: "'LANG=ja_JP.utf8' not in check_localectl_result.stdout"
+
+# タイムゾーン設定（タイムゾーンがUTCになっているのでJSTに変更）
+- name: set timezone to Asia/Tokyo
+  timezone:
+    name: Asia/Tokyo
+
+
+# パッケージアップデート
+- name: yum updade
+  yum: name=* state=latest
+
+
+# パッケージインストール
+- name: yum install
+  yum:
+    name: "{{packages}}"
+  vars:
+    packages:
+      - git
+
+
+# docker-composeのインストール
+- name: yum install docker-ce
+  yum:
+    name: docker
+    state: latest
+
+# dockerサービスの起動
+- name: start & enable docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+# docker-composeのインストール
+- name: docker-compose1.29.2のインストール（バージョン固定）
+  get_url:
+    url:  "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64"
+    dest: "/usr/bin/docker-compose"
+    mode: +x
+  become: yes
+
+# git clone。このリポジトリをクローンしている
+- name: git clone
+  ansible.builtin.git:
+    repo: https://github.com/yamadatt/ec2gitlab.git
+    dest: /home/ec2-user/ec2gitlab
+
+# docker-composeのbuild　これでイメージをダウンロードする
+- name: docker-compose build
+  shell:
+    cmd: 'docker-compose build'
+    chdir: /home/ec2-user/ec2gitlab
+  register: result_shell
+- debug: var=result_shell
+
+
+
+
